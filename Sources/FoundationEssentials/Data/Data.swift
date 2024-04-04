@@ -2028,6 +2028,7 @@ public struct Data : Equatable, Hashable, RandomAccessCollection, MutableCollect
         _representation = representation
     }
 
+#if !BUILDING_FOR_SWIFT_SYNTAX
 #if FOUNDATION_FRAMEWORK
     public typealias ReadingOptions = NSData.ReadingOptions
     public typealias WritingOptions = NSData.WritingOptions
@@ -2110,6 +2111,7 @@ public struct Data : Equatable, Hashable, RandomAccessCollection, MutableCollect
     public init(contentsOfFile path: String, options: ReadingOptions = []) throws {
         self = try readDataFromFile(path: .path(path), reportProgress: true, options: options)
     }
+#endif
 #endif
     
     // -----------------------------------
@@ -2433,6 +2435,7 @@ public struct Data : Equatable, Hashable, RandomAccessCollection, MutableCollect
     /// - parameter url: The location to write the data into.
     /// - parameter options: Options for writing the data. Default value is `[]`.
     /// - throws: An error in the Cocoa domain, if there is an error writing to the `URL`.
+#if !BUILDING_FOR_SWIFT_SYNTAX
     public func write(to url: URL, options: Data.WritingOptions = []) throws {
         if options.contains(.withoutOverwriting) && options.contains(.atomic) {
             fatalError("withoutOverwriting is not supported with atomic")
@@ -2458,6 +2461,7 @@ public struct Data : Equatable, Hashable, RandomAccessCollection, MutableCollect
         
         try writeToFile(path: .path(path), data: self, options: options, reportProgress: true)
     }
+#endif
 #endif
 
     // MARK: -

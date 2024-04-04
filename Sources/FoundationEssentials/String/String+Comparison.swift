@@ -418,10 +418,15 @@ extension Substring.UTF8View: _StringCompareOptionsIterable {
 
 extension Unicode.UTF8.CodeUnit : _StringCompareOptionsConvertible {
     func _transform(toHalfWidth: Bool, stripDiacritics: Bool, caseFolding: Bool) -> String.UTF8View {
+#if !BUILDING_FOR_SWIFT_SYNTAX
         String(unsafeUninitializedCapacity: 1) {
             $0[0] = caseFolding ? self._lowercased : self
             return 1
         }.utf8
+#else
+        let v = caseFolding ? self._lowercased : self
+        return String(decoding: [v], as: UTF8.self).utf8
+#endif
     }
 
     var intValue: Int? {

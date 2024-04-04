@@ -118,7 +118,7 @@ open class JSONDecoder {
         /// If the result of the conversion is a duplicate key, then only one value will be present in the container for the type to decode from.
         @preconcurrency
         case custom(@Sendable (_ codingPath: [CodingKey]) -> CodingKey)
-
+        
         fileprivate static func _convertFromSnakeCase(_ stringKey: String) -> String {
             guard !stringKey.isEmpty else { return stringKey }
 
@@ -324,11 +324,19 @@ open class JSONDecoder {
     public init() {}
 
     private var scannerOptions : JSONScanner.Options {
-        .init(assumesTopLevelDictionary: self.assumesTopLevelDictionary)
+        if #available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *) {
+            .init(assumesTopLevelDictionary: self.assumesTopLevelDictionary)
+        } else {
+            .init()
+        }
     }
 
     private var json5ScannerOptions : JSON5Scanner.Options {
-        .init(assumesTopLevelDictionary: self.assumesTopLevelDictionary)
+        if #available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *) {
+            .init(assumesTopLevelDictionary: self.assumesTopLevelDictionary)
+        } else {
+            .init()
+        }
     }
 
     // MARK: - Decoding Values
@@ -346,6 +354,7 @@ open class JSONDecoder {
         }, from: data)
     }
     
+#if !BUILDING_FOR_SWIFT_SYNTAX
     @available(FoundationPreview 0.1, *)
     open func decode<T: DecodableWithConfiguration>(_ type: T.Type, from data: Data, configuration: T.DecodingConfiguration) throws -> T {
         try _decode({
@@ -357,6 +366,7 @@ open class JSONDecoder {
     open func decode<T, C>(_ type: T.Type, from data: Data, configuration: C.Type) throws -> T where T : DecodableWithConfiguration, C : DecodingConfigurationProviding, T.DecodingConfiguration == C.DecodingConfiguration {
         try decode(type, from: data, configuration: C.decodingConfiguration)
     }
+#endif
     
     private func _decode<T>(_ unwrap: (JSONDecoderImpl, JSONMap.Value) throws -> T, from data: Data) throws -> T {
         do {
@@ -368,7 +378,7 @@ open class JSONDecoder {
                     // JSON5 is implemented with a separate scanner to allow regular JSON scanning to achieve higher performance without compromising for `allowsJSON5` checks throughout.
                     // Since the resulting JSONMap is identical, the decoder implementation is mostly shared between the two, with only a few branches to handle different methods of parsing strings and numbers. Strings and numbers are not completely parsed until decoding time.
                     let map: JSONMap
-                    if allowsJSON5 {
+                    if #available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *), allowsJSON5 {
                         var scanner = JSON5Scanner(bytes: utf8Buffer, options: self.json5ScannerOptions)
                         map = try scanner.scan()
                     } else {
@@ -621,11 +631,13 @@ extension JSONDecoderImpl: Decoder {
         }
     }
     
+#if !BUILDING_FOR_SWIFT_SYNTAX
     func unwrap<T: DecodableWithConfiguration>(_ mapValue: JSONMap.Value, as type: T.Type, configuration: T.DecodingConfiguration, for codingPathNode: _CodingPathNode, _ additionalKey: (some CodingKey)? = nil) throws -> T {
         try self.with(value: mapValue, path: codingPathNode.appending(additionalKey)) {
             try type.init(from: self, configuration: configuration)
         }
     }
+#endif
 
     private func unwrapDate<K: CodingKey>(from mapValue: JSONMap.Value, for codingPathNode: _CodingPathNode, _ additionalKey: K? = nil) throws -> Date {
         try checkNotNull(mapValue, expectedType: Date.self, for: codingPathNode, additionalKey)

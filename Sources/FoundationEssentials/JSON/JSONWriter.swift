@@ -80,10 +80,14 @@ extension String {
         }
         bytes.append(._quote)
         
+        #if BUILDING_FOR_SWIFT_SYNTAX
+        return String(decoding: bytes, as: UTF8.self)
+        #else
         return String(unsafeUninitializedCapacity: bytes.count) {
             _ = $0.initialize(from: bytes)
             return bytes.count
         }
+        #endif
     }
 }
 

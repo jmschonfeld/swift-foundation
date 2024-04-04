@@ -357,6 +357,7 @@ open class JSONEncoder {
         }, value: value)
     }
     
+#if !BUILDING_FOR_SWIFT_SYNTAX
     @available(FoundationPreview 0.1, *)
     open func encode<T : EncodableWithConfiguration>(_ value: T, configuration: T.EncodingConfiguration) throws -> Data {
         try _encode({
@@ -368,6 +369,7 @@ open class JSONEncoder {
     open func encode<T, C>(_ value: T, configuration: C.Type) throws -> Data where T : EncodableWithConfiguration, C : EncodingConfigurationProviding, T.EncodingConfiguration == C.EncodingConfiguration {
         try encode(value, configuration: C.encodingConfiguration)
     }
+#endif
     
     private func _encode<T>(_ wrap: (__JSONEncoder) throws -> JSONReference?, value: T) throws -> Data {
         let encoder = __JSONEncoder(options: self.options, initialDepth: 0)
@@ -1144,11 +1146,13 @@ private extension __JSONEncoder {
         }, for: node, additionalKey)
     }
     
+#if !BUILDING_FOR_SWIFT_SYNTAX
     func wrapGeneric<T: EncodableWithConfiguration>(_ value: T, configuration: T.EncodingConfiguration, for node: _CodingPathNode, _ additionalKey: (some CodingKey)? = _CodingKey?.none) throws -> JSONReference? {
         try _wrapGeneric({
             try value.encode(to: $0, configuration: configuration)
         }, for: node, additionalKey)
     }
+#endif
     
     func _wrapGeneric(_ encode: (__JSONEncoder) throws -> (), for node: _CodingPathNode, _ additionalKey: (some CodingKey)? = _CodingKey?.none) throws -> JSONReference? {
         // The value should request a container from the __JSONEncoder.

@@ -186,6 +186,18 @@ extension String {
         utf8Capacity capacity: Int,
         initializingWith initializer: (inout OutputBuffer<UInt8>) throws -> Void
     ) rethrows {
+        #if BUILDING_FOR_SWIFT_SYNTAX
+        self = try withUnsafeTemporaryAllocation(of: UInt8.self, capacity: capacity) { buffer in
+            var output = OutputBuffer(
+                initializing: buffer.baseAddress.unsafelyUnwrapped,
+                capacity: capacity
+            )
+            try initializer(&output)
+            let initialized = output.relinquishBorrowedMemory()
+            assert(initialized.baseAddress == buffer.baseAddress)
+            return String(decoding: initialized, as: UTF8.self)
+        }
+        #else
         try self.init(
             unsafeUninitializedCapacity: capacity,
             initializingUTF8With: { buffer in
@@ -199,6 +211,7 @@ extension String {
                 return initialized.count
             }
         )
+        #endif
     }
 }
 
