@@ -16,7 +16,11 @@ import Darwin
 import Glibc
 #endif
 
+#if BUILDING_FOR_SWIFT_SYNTAX
+internal import _FoundationEssentialsCShims
+#else
 internal import _CShims
+#endif
 
 /// A marker protocol used to determine whether a value is a `String`-keyed `Dictionary`
 /// containing `Decodable` values (in which case it should be exempt from key conversion strategies).

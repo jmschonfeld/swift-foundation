@@ -16,7 +16,11 @@ import Darwin
 import Glibc
 #endif
 
+#if BUILDING_FOR_SWIFT_SYNTAX
+internal import _FoundationEssentialsCShims
+#else
 internal import _CShims
+#endif
 
 internal struct JSON5Scanner {
     let options: Options

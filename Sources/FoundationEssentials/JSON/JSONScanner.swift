@@ -59,7 +59,11 @@ import Darwin
 import Glibc
 #endif // canImport(Darwin)
 
+#if BUILDING_FOR_SWIFT_SYNTAX
+internal import _FoundationEssentialsCShims
+#else
 internal import _CShims
+#endif
 
 internal class JSONMap {
     enum TypeDescriptor : Int {

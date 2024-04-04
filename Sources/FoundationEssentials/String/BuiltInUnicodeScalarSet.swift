@@ -9,7 +9,11 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if BUILDING_FOR_SWIFT_SYNTAX
+internal import _FoundationEssentialsCShims
+#else
 internal import _CShims
+#endif
 
 // Native implementation of CFCharacterSet.
 // Represents sets of unicode scalars of those whose bitmap data we own.
