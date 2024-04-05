@@ -137,8 +137,7 @@ let package = Package(
         .testTarget(
             name: "FoundationMacrosTests",
             dependencies: [
-                "FoundationMacros",
-                "TestSupport"
+                "FoundationMacros"
             ],
             swiftSettings: availabilityMacros
         )
