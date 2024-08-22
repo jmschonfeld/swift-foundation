@@ -97,7 +97,7 @@ let package = Package(
             name: "TestSupport",
             dependencies: [
                 "FoundationEssentials",
-                "FoundationInternationalization",
+                "FoundationInternationalization"
             ],
             cSettings: wasiLibcCSettings,
             swiftSettings: availabilityMacros + concurrencyChecking
@@ -181,7 +181,7 @@ let package = Package(
             name: "FoundationInternationalizationTests",
             dependencies: [
                 "TestSupport",
-                "FoundationInternationalization",
+                "FoundationInternationalization"
             ],
             swiftSettings: availabilityMacros + concurrencyChecking
         ),
@@ -212,8 +212,7 @@ package.targets.append(contentsOf: [
     .testTarget(
         name: "FoundationMacrosTests",
         dependencies: [
-            "FoundationMacros",
-            "TestSupport"
+            "FoundationMacros"
         ],
         swiftSettings: availabilityMacros + concurrencyChecking
     )
