@@ -11,33 +11,34 @@
 //===----------------------------------------------------------------------===//
 //
 
-#if canImport(TestSupport)
-import TestSupport
-#endif
-
-#if canImport(Glibc)
+#if canImport(Darwin)
+import Darwin
+#elseif canImport(Glibc)
 import Glibc
 #endif
 
-#if FOUNDATION_FRAMEWORK
-@testable import Foundation
-#else
+#if !FOUNDATION_FRAMEWORK && os(macOS)
+import class Foundation.Bundle
+#endif
+
+#if canImport(FoundationEssentials)
 @testable import FoundationEssentials
-#endif // FOUNDATION_FRAMEWORK
+#elseif FOUNDATION_FRAMEWORK
+@testable import Foundation
+#endif
 
 #if FOUNDATION_FRAMEWORK
 // Always compiled into the Tests project
-final internal class Canary { }
+final private class Canary { }
 #endif
 
-func testData(forResource resource: String, withExtension ext: String, subdirectory: String? = nil) -> Data? {
+func testData(forResource resource: String, withExtension ext: String, subdirectory: String? = nil) throws -> Data {
 #if FOUNDATION_FRAMEWORK
     guard let url = Bundle(for: Canary.self).url(forResource: resource, withExtension: ext, subdirectory: subdirectory) else {
-        return nil
+        throw CocoaError(.fileReadNoSuchFile)
     }
-    return try? Data(contentsOf: url)
-#else
-#if os(macOS)
+    return try Data(contentsOf: url)
+#elseif os(macOS)
     let subdir: String
     if let subdirectory {
         subdir = "Resources/" + subdirectory
@@ -46,12 +47,13 @@ func testData(forResource resource: String, withExtension ext: String, subdirect
     }
 
     guard let url = Bundle.module.url(forResource: resource, withExtension: ext, subdirectory: subdir) else {
-        return nil
+        throw CocoaError(.fileReadNoSuchFile)
     }
     
+    // Convert from Foundation.URL to FoundationEssentials.URL
     let essentialsURL = FoundationEssentials.URL(filePath: url.path)
 
-    return try? Data(contentsOf: essentialsURL)
+    return try Data(contentsOf: essentialsURL)
 #else
     // swiftpm drops the resources next to the executable, at:
     // ./swift-foundation_FoundationEssentialsTests.resources/Resources/
@@ -77,7 +79,6 @@ func testData(forResource resource: String, withExtension ext: String, subdirect
         path.append(path: subdirectory, directoryHint: .isDirectory)
     }
     path.append(component: resource + "." + ext, directoryHint: .notDirectory)
-    return try? Data(contentsOf: path)
-#endif
+    return try Data(contentsOf: path)
 #endif
 }

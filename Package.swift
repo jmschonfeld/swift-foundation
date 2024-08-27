@@ -144,7 +144,6 @@ let package = Package(
         .testTarget(
             name: "FoundationEssentialsTests",
             dependencies: [
-                "TestSupport",
                 "FoundationEssentials"
             ],
             resources: [
