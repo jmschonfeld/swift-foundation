@@ -326,28 +326,6 @@ struct URLTests {
         try FileManager.default.removeItem(at: URL(filePath: "\(tempDirectory.path)/tmp-dir"))
     }
 
-    @Test func testURLFilePathRelativeToBase() throws {
-        try FileManagerPlayground {
-            Directory("dir") {
-                "Foo"
-                "Bar"
-            }
-        }.test {
-            let currentDirectoryPath = $0.currentDirectoryPath
-            let baseURL = URL(filePath: currentDirectoryPath, directoryHint: .isDirectory)
-            let relativePath = "dir"
-
-            let url1 = URL(filePath: relativePath, directoryHint: .isDirectory, relativeTo: baseURL)
-
-            let url2 = URL(filePath: relativePath, directoryHint: .checkFileSystem, relativeTo: baseURL)
-            #expect(url1 == url2, "\(url1) was not equal to \(url2)")
-
-            // directoryHint is `.inferFromPath` by default
-            let url3 = URL(filePath: relativePath + "/", relativeTo: baseURL)
-            #expect(url1 == url3, "\(url1) was not equal to \(url3)")
-        }
-    }
-
     @Test func testURLRelativeDotDotResolution() throws {
         let baseURL = URL(filePath: "/docs/src/")
         var result = URL(filePath: "../images/foo.png", relativeTo: baseURL)
@@ -1104,5 +1082,31 @@ struct URLTests {
         #expect(comp.encodedHost == "%2Fpath%2Fto%2Fsocket")
         #expect(comp.host == "/path/to/socket")
         #expect(comp.path == "/info")
+    }
+}
+
+extension FilePlaygroundTests {
+    struct URLTests {
+        @Test func testURLFilePathRelativeToBase() throws {
+            try playground {
+                Directory("dir") {
+                    "Foo"
+                    "Bar"
+                }
+            }.test {
+                let currentDirectoryPath = $0.currentDirectoryPath
+                let baseURL = URL(filePath: currentDirectoryPath, directoryHint: .isDirectory)
+                let relativePath = "dir"
+                
+                let url1 = URL(filePath: relativePath, directoryHint: .isDirectory, relativeTo: baseURL)
+                
+                let url2 = URL(filePath: relativePath, directoryHint: .checkFileSystem, relativeTo: baseURL)
+                #expect(url1 == url2, "\(url1) was not equal to \(url2)")
+                
+                // directoryHint is `.inferFromPath` by default
+                let url3 = URL(filePath: relativePath + "/", relativeTo: baseURL)
+                #expect(url1 == url3, "\(url1) was not equal to \(url3)")
+            }
+        }
     }
 }

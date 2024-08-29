@@ -96,9 +96,9 @@ let package = Package(
         .target(
             name: "TestSupport",
             dependencies: [
-                "FoundationEssentials",
-                "FoundationInternationalization"
+                "FoundationEssentials"
             ],
+            path: "Tests/TestSupport",
             cSettings: wasiLibcCSettings,
             swiftSettings: availabilityMacros + concurrencyChecking
         ),
@@ -144,7 +144,8 @@ let package = Package(
         .testTarget(
             name: "FoundationEssentialsTests",
             dependencies: [
-                "FoundationEssentials"
+                "FoundationEssentials",
+                "TestSupport"
             ],
             resources: [
                 .copy("Resources")

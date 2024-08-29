@@ -9,6 +9,10 @@
 
 import Testing
 
+#if canImport(TestSupport)
+import TestSupport
+#endif
+
 #if canImport(FoundationEssentials)
 import FoundationEssentials
 #elseif FOUNDATION_FRAMEWORK

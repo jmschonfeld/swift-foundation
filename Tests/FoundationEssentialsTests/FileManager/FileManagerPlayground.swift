@@ -116,7 +116,8 @@ struct FileManagerPlayground {
     
     private let directory: Directory
     
-    init(@DirectoryBuilder _ contentsClosure: () -> [Item]) {
+    // Note: do not initialize the playground directly. Create a sub-suite of FilePlaygroundTests and call `self.playground`
+    fileprivate init(@DirectoryBuilder _ contentsClosure: () -> [Item]) {
         self.directory = Directory("FileManagerPlayground_\(UUID().uuidString)", contentsClosure)
     }
     
@@ -137,5 +138,14 @@ struct FileManagerPlayground {
             try #require(fileManager.changeCurrentDirectoryPath(previousCWD), "Failed to change CWD back to the original directory", sourceLocation: sourceLocation)
             try fileManager.removeItem(atPath: createdDir)
         }
+    }
+}
+
+// File playground tests change the CWD, so they need to be serialized
+@Suite(.serialized)
+struct FilePlaygroundTests {
+    // An entry point for sub-suites to create a playground. This should not be called from outside the FilePlaygroundTests suite or nested suites
+    static func playground(@FileManagerPlayground.DirectoryBuilder _ contentsClosure: () -> [FileManagerPlayground.Item]) -> FileManagerPlayground {
+        FileManagerPlayground(contentsClosure)
     }
 }
