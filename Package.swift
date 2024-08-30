@@ -183,6 +183,9 @@ let package = Package(
                 "TestSupport",
                 "FoundationInternationalization"
             ],
+            resources: [
+                .copy("Resources")
+            ],
             swiftSettings: availabilityMacros + concurrencyChecking
         ),
         

@@ -137,7 +137,7 @@ struct DateTests {
 
 // MARK: - Bridging
 #if FOUNDATION_FRAMEWORK
-final class DateBridgingTests : XCTestCase {
+struct DateBridgingTests {
     @Test func testCast() {
         let d0 = NSDate()
         let d1 = d0 as Date

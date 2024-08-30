@@ -36,7 +36,9 @@ struct GregorianCalendarRecurrenceRuleTests {
         recurrenceRule1.weekdays = [.every(.monday), .nth(1, .wednesday)]
         recurrenceRule1.end = .afterOccurrences(5)
         
-        var recurrenceRule2 = Calendar.RecurrenceRule(calendar: .init(identifier: .gregorian), frequency: .daily)
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.locale = .init(identifier: "en_001")
+        var recurrenceRule2 = Calendar.RecurrenceRule(calendar: calendar, frequency: .daily)
         recurrenceRule2.months = [2, 10]
         recurrenceRule2.weeks = [1, -1]
         recurrenceRule2.setPositions = [1]
