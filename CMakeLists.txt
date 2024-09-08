@@ -146,4 +146,5 @@ include(GNUInstallDirs)
 include(SwiftFoundationSwiftSupport)
 
 add_subdirectory(Sources)
+add_subdirectory(Tests/FundamentalToolchainTests)
 add_subdirectory(cmake/modules)
