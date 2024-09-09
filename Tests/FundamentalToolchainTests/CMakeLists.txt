@@ -12,7 +12,7 @@
 ##
 ##===----------------------------------------------------------------------===##
 
-add_executable(FundamentalToolchainTests
+add_executable(FundamentalToolchainTests EXCLUDE_FROM_ALL
 	main.swift)
 
 add_custom_command(TARGET FundamentalToolchainTests
