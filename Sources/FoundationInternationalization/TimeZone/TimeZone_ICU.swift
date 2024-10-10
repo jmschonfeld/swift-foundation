@@ -87,6 +87,9 @@ internal final class _TimeZoneICU: _TimeZoneProtocol, Sendable {
         if let offset = TimeZone.tryParseGMTName(name), let offsetName = TimeZone.nameForSecondsFromGMT(offset) {
             name = offsetName
         } else {
+            #if os(Windows)
+            name = Self.getSystemTimeZoneID(forWindowsIdentifier: name) ?? name
+            #endif
             guard Self.getCanonicalTimeZoneID(for: name) != nil else {
                 return nil
             }
@@ -308,6 +311,23 @@ internal final class _TimeZoneICU: _TimeZoneProtocol, Sendable {
         }
         return result
     }
+
+    #if os(Windows)
+    private static func getSystemTimeZoneID(forWindowsIdentifier identifier: String) -> String? {
+        let timeZoneIdentifier = Array(identifier.utf16)
+        let result: String? = timeZoneIdentifier.withUnsafeBufferPointer { identifier in
+            return _withResizingUCharBuffer { buffer, size, status in
+                let len = ucal_getTimeZoneIDForWindowsID(identifier.baseAddress, Int32(identifier.count), nil, buffer, size, &status)
+                if status.isSuccess {
+                    return len
+                } else {
+                    return nil
+                }
+            }
+        }
+        return result
+    }
+    #endif
 
     internal static func timeZoneNamesFromICU() -> [String] {
         let filteredTimeZoneNames = [
