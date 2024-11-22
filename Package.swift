@@ -16,11 +16,12 @@ let versionNumbers = ["0.1", "0.2", "0.3", "0.4", "6.0.2", "6.2"]
 // Availability Macro Utilities
 
 enum _OSAvailability: String {
-    case alwaysAvailable = "macOS 13.3, iOS 16.4, tvOS 16.4, watchOS 9.4" // This should match the package's deployment target
-    case macOS14_0 = "macOS 14, iOS 17, tvOS 17, watchOS 10"
-    case macOS15_0 = "macOS 15, iOS 18, tvOS 18, watchOS 11"
+    case alwaysAvailable = "macOS 15, iOS 18, tvOS 18, watchOS 11" // This should match the package's deployment target
     // Use 10000 for future availability to avoid compiler magic around the 9999 version number but ensure it is greater than 9999
     case future = "macOS 10000, iOS 10000, tvOS 10000, watchOS 10000"
+    
+    static var macOS14_0: Self { .alwaysAvailable }
+    static var macOS15_0: Self { .alwaysAvailable }
 }
 struct _Availability {
     let name: String
@@ -77,7 +78,7 @@ let wasiLibcCSettings: [CSetting] = [
 
 let package = Package(
     name: "swift-foundation",
-    platforms: [.macOS("13.3"), .iOS("16.4"), .tvOS("16.4"), .watchOS("9.4")],
+    platforms: [.macOS("15"), .iOS("18"), .tvOS("18"), .watchOS("11")],
     products: [
         .library(name: "FoundationEssentials", targets: ["FoundationEssentials"]),
         .library(name: "FoundationInternationalization", targets: ["FoundationInternationalization"]),
