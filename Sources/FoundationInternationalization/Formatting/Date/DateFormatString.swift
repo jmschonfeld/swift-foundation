@@ -32,7 +32,7 @@ extension String {
             return String(repeating: "'", count: 2 * count)
         }
 
-        return "'\(self.replacing("'", with: "''"))'"
+        return "'\(self.replacing(Array("'"), with: Array("''")))'"
     }
 }
 

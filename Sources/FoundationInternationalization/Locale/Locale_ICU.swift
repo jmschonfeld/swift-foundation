@@ -399,9 +399,9 @@ internal final class _LocaleICU: _LocaleProtocol, Sendable {
                 return uloc_toLanguageTag(string, buffer, size, UBool.false, &status)
             }
 
-            if let canonicalized = bcp47?.replacing("-", with: "_") {
+            if let canonicalized = bcp47?.replacing(Array("-"), with: Array("_")) {
                 if canonicalized == "und" {
-                    result = canonicalized.replacing("und", with: "root")
+                    result = canonicalized.replacing(Array("und"), with: Array("root"))
                 } else {
                     result = canonicalized
                 }
