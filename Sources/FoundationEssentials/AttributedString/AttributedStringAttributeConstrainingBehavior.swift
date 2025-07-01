@@ -251,8 +251,13 @@ extension AttributedString.Guts {
     func enforceAttributeConstraintsAfterMutation(
         in utf8Range: Range<Int>,
         type: _MutationType,
-        constraintsInvolved: [AttributedString.AttributeRunBoundaries]? = nil
+        constraintsInvolved: [AttributedString.AttributeRunBoundaries]? = nil,
+        endingSeparatorIsPreExisting: Bool = true
     ) {
+        if !endingSeparatorIsPreExisting {
+            assert(type != .attributes) // Attribute-only changes cannot change paragraph boundaries
+        }
+        
         guard !runs.isEmpty else {
             // If we're an empty string, no fixups are required
             return
@@ -342,6 +347,25 @@ extension AttributedString.Guts {
                     type: .paragraph,
                     from: endParagraph.lowerBound,
                     to: utf8Range.upperBound ..< endParagraph.upperBound)
+            }
+            
+            // We may need to fix-up a following paragraph separator if the following occur:
+            // 1. The mutation didn't previously end in a separator (a new break has been added at the end of this range)
+            // 2. The mutation is not a removal (removals can only combine paragraphs, not split them)
+            // 3. The mutation is not at the end of the text (potential for a trailing paragraph)
+            // 4. The mutated text ends in a paragraph separator
+            // 5. The text after the mutation begins with a paragraph separator
+            if !endingSeparatorIsPreExisting,
+               !strRange.isEmpty,
+               strRange.upperBound < string.endIndex,
+               string.utf8._isBlockSeparator(at: string.utf8.index(before: strRange.upperBound), stopAtLineSeparators: false, reverse: true),
+               let emptySeparator = string.utf8._rangeOfBlockSeparator(at: strRange.upperBound, stopAtLineSeparators: false, reverse: false) {
+                // If this is the case, a paragraph separator that previously existed directly following the mutation has been split from the paragraph and now terminates an empty paragraph
+                // In this scenario, the separator has effectively created a new paragraph and should not contain attributes it retains from its prior paragraph
+                // We now remove all attributes that shouldn't be inherited by newly created, empty paragraphs from the separator following the mutation
+                runs(in: emptySeparator._utf8OffsetRange).updateEach { attributes, _, _ in
+                    attributes = attributes.attributesForEmptyParagraph()
+                }
             }
         }
     }

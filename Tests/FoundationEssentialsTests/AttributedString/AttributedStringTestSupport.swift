@@ -66,6 +66,13 @@ extension AttributeScopes.TestAttributes {
         static let runBoundaries: AttributedString.AttributeRunBoundaries? = .paragraph
     }
     
+    enum TestParagraphConstrainedNonExtending: CodableAttributedStringKey {
+        typealias Value = Int
+        static let name = "TestParagraphConstrainedNonExtending"
+        static let runBoundaries: AttributedString.AttributeRunBoundaries? = .paragraph
+        static let inheritedByAddedText = false
+    }
+    
     enum TestCharacterConstrained: CodableAttributedStringKey {
         typealias Value = Int
         static let name = "TestCharacterConstrained"
@@ -134,6 +141,7 @@ extension AttributeScopes {
         var testNonExtended : TestNonExtended
         var testParagraphConstrained : TestParagraphConstrained
         var testSecondParagraphConstrained : TestSecondParagraphConstrained
+        var testParagraphNonExtending : TestParagraphConstrainedNonExtending
         var testCharacterConstrained : TestCharacterConstrained
         var testUnicodeScalarConstrained : TestUnicodeCharacterConstrained
         var testAttributeDependent : TestAttributeDependent

@@ -445,19 +445,27 @@ extension AttributedString.Guts {
         }
     }
 
+    
+    typealias StringMutationState = (mutationStartUTF8Offset: Int, isInsertion: Bool, preMutationEndsWithSeparator: Bool, oldUTF8Count: Int, invalidationRange: Range<Int>)
+    
     func _prepareStringMutation(
         in range: Range<BigString.Index>
-    ) -> (mutationStartUTF8Offset: Int, isInsertion: Bool, oldUTF8Count: Int, invalidationRange: Range<Int>) {
+    ) -> StringMutationState {
         let utf8TargetRange = range._utf8OffsetRange
         let invalidationRange = self.enforceAttributeConstraintsBeforeMutation(to: utf8TargetRange)
         self._prepareTrackedIndicesUpdate(mutationRange: range)
         assert(invalidationRange.lowerBound <= utf8TargetRange.lowerBound)
         assert(invalidationRange.upperBound >= utf8TargetRange.upperBound)
-        return (utf8TargetRange.lowerBound, utf8TargetRange.isEmpty, self.string.utf8.count, invalidationRange)
+        var preMutationEndsWithSeparator = false
+        if !utf8TargetRange.isEmpty {
+            let idx = string.utf8.index(before: range.upperBound)
+            preMutationEndsWithSeparator = string.utf8._isBlockSeparator(at: idx, stopAtLineSeparators: false, reverse: true, strict: true)
+        }
+        return (utf8TargetRange.lowerBound, utf8TargetRange.isEmpty, preMutationEndsWithSeparator, self.string.utf8.count, invalidationRange)
     }
 
     func _finalizeStringMutation(
-        _ state: (mutationStartUTF8Offset: Int, isInsertion: Bool, oldUTF8Count: Int, invalidationRange: Range<Int>)
+        _ state: StringMutationState
     ) {
         let utf8Delta = self.string.utf8.count - state.oldUTF8Count
         self._finalizeTrackedIndicesUpdate(mutationStartOffset: state.mutationStartUTF8Offset, isInsertion: state.isInsertion, utf8LengthDelta: utf8Delta)
@@ -465,7 +473,8 @@ extension AttributedString.Guts {
         let upper = state.invalidationRange.upperBound + utf8Delta
         self.enforceAttributeConstraintsAfterMutation(
             in: lower ..< upper,
-            type: .attributesAndCharacters)
+            type: .attributesAndCharacters,
+            endingSeparatorIsPreExisting: state.preMutationEndsWithSeparator)
     }
 
     func replaceSubrange(

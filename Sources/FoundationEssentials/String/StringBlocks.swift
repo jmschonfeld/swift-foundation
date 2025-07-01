@@ -37,12 +37,15 @@ struct _StringBlock<Index> {
 
 extension BidirectionalCollection where Element == UTF8.CodeUnit {
 
-    // Returns the index range the separator if a match is found. This always rewinds the start index to that of "\r" in the case where "\r\n" is present.
-    private func _matchesSeparators(_ separators: [[UTF8.CodeUnit]], from start: Index, reverse: Bool = false) -> Range<Index>? {
+    // Returns the index range the separator if a match is found. This rewinds the start index to that of "\r" in the case where "\r\n" is present if strict is false.
+    private func _matchesSeparators(_ separators: [[UTF8.CodeUnit]], from start: Index, reverse: Bool = false, strict: Bool = false) -> Range<Index>? {
         let startingCharacter = self[start]
 
         // Special case when startingCharacter is "\r" or "\n" in "\r\n"
         if startingCharacter == .carriageReturn {
+            if reverse && strict {
+                return nil
+            }
             let next = index(after: start)
             if next < endIndex && self[next] == .newline {
                 return start..<index(after: next)
@@ -98,6 +101,16 @@ extension BidirectionalCollection where Element == UTF8.CodeUnit {
     ) -> _StringBlock<Index> {
         let range = inputRangeExpr.relative(to: self)
         return _getBlock(for: options, in: range)
+    }
+    
+    func _rangeOfBlockSeparator(at idx: Index, stopAtLineSeparators: Bool, reverse: Bool = false, strict: Bool = false) -> Range<Index>? {
+        let separatorCharacters = stopAtLineSeparators ? String.lineSeparators : String.paragraphSeparators
+        precondition(idx >= startIndex && idx < endIndex)
+        return _matchesSeparators(separatorCharacters, from: idx, reverse: reverse, strict: strict)
+    }
+    
+    func _isBlockSeparator(at idx: Index, stopAtLineSeparators: Bool, reverse: Bool, strict: Bool = false) -> Bool {
+        _rangeOfBlockSeparator(at: idx, stopAtLineSeparators: stopAtLineSeparators, reverse: reverse, strict: strict) != nil
     }
 
     func _getBlock(

@@ -347,6 +347,138 @@ private struct AttributedStringConstrainingBehaviorTests {
         
     }
     
+    @Test(arguments: [
+        "\n",
+        "\r\n",
+        "\u{2029}"
+    ])
+    func emptyParagraphCreation(separator: String) {
+        let allAttrs = AttributeContainer
+            .testParagraphNonExtending(1)
+            .testParagraphConstrained(2)
+            .testNonExtended(3)
+            .testInt(4)
+        
+        func expected(prefix: String, new: String, suffix: String = "", impacted: Bool = true) -> AttributedString {
+            var result = AttributedString()
+            if !prefix.isEmpty {
+                result += AttributedString(prefix, attributes: allAttrs)
+            }
+            if !new.isEmpty {
+                result += AttributedString(new, attributes: AttributeContainer.testParagraphConstrained(2).testInt(4).testParagraphNonExtending(1))
+            }
+            if !suffix.isEmpty {
+                result += AttributedString(suffix, attributes: AttributeContainer.testParagraphConstrained(2).testInt(4))
+            }
+            result += AttributedString(separator, attributes: impacted ? AttributeContainer.testParagraphConstrained(2).testInt(4).testNonExtended(3) : allAttrs)
+            return result
+        }
+        
+        // Inserting text should fixup a new empty paragraph's separator
+        
+        do {
+            var str = AttributedString("ABC\(separator)", attributes: allAttrs)
+            let idx = str.index(str.startIndex, offsetByCharacters: 3)
+            str.characters.insert(contentsOf: separator, at: idx)
+            #expect(str == expected(prefix: "ABC", new: separator))
+        }
+        
+        do {
+            var str = AttributedString("ABC\(separator)", attributes: allAttrs)
+            let idx = str.index(str.startIndex, offsetByCharacters: 3)
+            str.characters.insert(contentsOf: "DEF\(separator)", at: idx)
+            #expect(str == expected(prefix: "ABC", new: "DEF\(separator)"))
+        }
+        
+        // Replacing text should fixup a new empty paragraph's separator
+        
+        do {
+            var str = AttributedString("ABC\(separator)", attributes: allAttrs)
+            let idx1 = str.index(afterCharacter: str.startIndex)
+            let idx2 = str.index(str.startIndex, offsetByCharacters: 3)
+            str.characters.replaceSubrange(idx1 ..< idx2, with: "DEF\(separator)")
+            #expect(str == expected(prefix: "A", new: "DEF\(separator)"))
+        }
+        
+        do {
+            var str = AttributedString("ABC\(separator)", attributes: allAttrs)
+            let idx1 = str.index(afterCharacter: str.startIndex)
+            let idx2 = str.index(str.startIndex, offsetByCharacters: 3)
+            str.characters.replaceSubrange(idx1 ..< idx2, with: "D\(separator)")
+            #expect(str == expected(prefix: "A", new: "D\(separator)"))
+        }
+        
+        // Replacing an already-existing break should not impact following paragraphs
+        
+        do {
+            var str = AttributedString("ABC\(separator)\(separator)", attributes: allAttrs)
+            let idx1 = str.index(afterCharacter: str.startIndex)
+            let idx2 = str.index(str.startIndex, offsetByCharacters: 4)
+            str.characters.replaceSubrange(idx1 ..< idx2, with: "DEF\(separator)")
+            #expect(str == expected(prefix: "A", new: "DEF\(separator)", impacted: false))
+        }
+        
+        // Removing text in a paragraph should not impact its paragraph separator
+        
+        do {
+            var str = AttributedString("ABC\(separator)", attributes: allAttrs)
+            let idx = str.index(str.startIndex, offsetByCharacters: 3)
+            str.removeSubrange(str.startIndex ..< idx)
+            #expect(str == AttributedString(separator, attributes: allAttrs))
+        }
+        
+        // New non-empty paragraphs should behave the same
+        
+        do {
+            var str = AttributedString("ABC\(separator)", attributes: allAttrs)
+            let idx = str.index(str.startIndex, offsetByCharacters: 3)
+            str.characters.insert(contentsOf: "DE\(separator)F", at: idx)
+            #expect(str == expected(prefix: "ABC", new: "DE\(separator)", suffix: "F"))
+        }
+        
+        do {
+            var str = AttributedString("ABC\(separator)", attributes: allAttrs)
+            let idx1 = str.index(afterCharacter: str.startIndex)
+            let idx2 = str.index(str.startIndex, offsetByCharacters: 3)
+            str.characters.replaceSubrange(idx1 ..< idx2, with: "DE\(separator)F")
+            #expect(str == expected(prefix: "A", new: "DE\(separator)", suffix: "F"))
+        }
+    }
+    
+    @Test func emptyParagraphCreation_edgeCases() {
+        let allAttrs = AttributeContainer
+            .testParagraphNonExtending(1)
+            .testParagraphConstrained(2)
+            .testNonExtended(3)
+            .testInt(4)
+        
+        // Replacing a portion of a multi-scalar break with a new break
+        do {
+            var str = AttributedString("ABC\r\n", attributes: allAttrs)
+            let idx = str.index(str.startIndex, offsetByUnicodeScalars: 3)
+            str.unicodeScalars.replaceSubrange(idx ..< str.index(afterUnicodeScalar: idx), with: CollectionOfOne("\n"))
+            
+            var expected = AttributedString("ABC", attributes: allAttrs)
+            expected += AttributedString("\n", attributes: AttributeContainer.testParagraphNonExtending(1).testParagraphConstrained(2).testInt(4))
+            expected += AttributedString("\n", attributes: AttributeContainer.testParagraphConstrained(2).testInt(4).testNonExtended(3))
+            #expect(str == expected)
+        }
+        
+        // Replacing a separator with a different separator
+        
+        
+        do {
+            var str = AttributedString("ABC\n\n", attributes: allAttrs)
+            let idx = str.index(str.startIndex, offsetByUnicodeScalars: 3)
+            str.unicodeScalars.replaceSubrange(idx ..< str.index(afterUnicodeScalar: idx), with: CollectionOfOne("\u{2029}"))
+            
+            var expected = AttributedString("ABC", attributes: allAttrs)
+            expected += AttributedString("\u{2029}", attributes: AttributeContainer.testParagraphNonExtending(1).testParagraphConstrained(2).testInt(4))
+            expected += AttributedString("\n", attributes: allAttrs)
+            #expect(str == expected)
+        }
+    }
+    
     // MARK: - Character Constrained Tests
     
     @Test func characterAttributeApply() {

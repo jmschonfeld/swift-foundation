@@ -189,6 +189,15 @@ extension AttributedString._AttributeStorage {
         // FIXME: Why not set `invalidatableKeys` here?
         return storage
     }
+    
+    func attributesForEmptyParagraph() -> Self {
+        var storage = Self()
+        // Filter attributes that are bound to paragraphs and not inherited
+        storage.contents = contents.filter {
+            $0.value.inheritedByAddedText || $0.value.runBoundaries != .paragraph
+        }
+        return storage
+    }
 
     private mutating func _attributeModified(_ key: String, old: _AttributeValue?, new: _AttributeValue?) {
         guard old != nil || new != nil else { return } // Shortcut for nil -> nil modification
