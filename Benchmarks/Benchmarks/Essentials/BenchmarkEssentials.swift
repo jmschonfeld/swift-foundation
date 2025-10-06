@@ -56,6 +56,15 @@ let benchmarks = {
         }
     }
     
+    class DataBox {
+        var d: Data
+        
+        init(d: Data) {
+            self.d = d
+        }
+    }
+    
+    
     // MARK: -
     
     Benchmark("DataEqualEmpty", closure: { benchmark, box in
@@ -119,6 +128,54 @@ let benchmarks = {
         let d2 = createSomeData(1024 * 1024 * 8)
         let box = TwoDatasBox(d1: d1, d2: d2)
         return box
+    })
+    
+    Benchmark("DataIterate-Iterator", closure: { benchmark, box in
+        for byte in box.d {
+            blackHole(byte)
+        }
+    }, setup: { () -> DataBox in
+        DataBox(d: createSomeData(1024 * 1024 * 8))
+    })
+    
+    Benchmark("DataIterate-Indices", closure: { benchmark, box in
+        for i in 0 ..< box.d.count {
+            blackHole(box.d[i])
+        }
+    }, setup: { () -> DataBox in
+        DataBox(d: createSomeData(1024 * 1024 * 8))
+    })
+    
+    Benchmark("DataMakeRawSpan", closure: { benchmark, box in
+        for _ in benchmark.scaledIterations {
+            let data = box.d
+            let span = data.bytes
+            blackHole(span.isEmpty)
+        }
+    }, setup: { () -> DataBox in
+        DataBox(d: createSomeData(1024 * 1024 * 8))
+    })
+    
+    Benchmark("DataAppend", closure: { benchmark, box in
+        for _ in benchmark.scaledIterations {
+            box.d.append(5)
+        }
+    }, setup: { () -> DataBox in
+        DataBox(d: createSomeData(1024 * 1024 * 8))
+    })
+    
+    Benchmark("DataInsert", closure: { benchmark, box in
+        for _ in benchmark.scaledIterations {
+            box.d.insert(5, at: 0)
+        }
+    }, setup: { () -> DataBox in
+        DataBox(d: createSomeData(1024 * 1024 * 8))
+    })
+    
+    Benchmark("DataFromString", closure: { benchmark, string in
+        blackHole(string.data(using: .ascii))
+    }, setup: { () -> String in
+        Array(repeating: "A", count: 1024 * 1024).joined()
     })
 
 }
