@@ -234,7 +234,7 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
     /// Initialize an empty `Data`.
     @inlinable // This is @inlinable as a trivial initializer.
     public init() {
-        _representation = .empty
+        _representation = _Representation(capacity: 0)
     }
 
 
@@ -249,7 +249,7 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
         let whichDeallocator = deallocator._deallocator
         if count == 0 {
             deallocator._deallocator(bytes, count)
-            _representation = .empty
+            _representation = _Representation(capacity: 0)
         } else {
             let storage = __DataStorage(bytes: bytes, length: count, copy: false, deallocator: whichDeallocator, offset: 0)
             switch deallocator {
@@ -345,7 +345,7 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
         }
     }
 
-    @inlinable // This is @inlinable as a generic, trivially forwarding function.
+    @inlinable @inline(__always) // This is @inlinable as a generic, trivially forwarding function.
     public func withUnsafeBytes<ResultType>(_ body: (UnsafeRawBufferPointer) throws -> ResultType) rethrows -> ResultType {
         return try _representation.withUnsafeBytes(body)
     }
@@ -355,24 +355,9 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
     public var bytes: RawSpan {
         @lifetime(borrow self)
         borrowing get {
-            let buffer: UnsafeRawBufferPointer
-            switch _representation {
-            case .empty:
-                buffer = UnsafeRawBufferPointer(start: nil, count: 0)
-            case .inline(let inline):
-                buffer = unsafe UnsafeRawBufferPointer(
-                  start: UnsafeRawPointer(Builtin.addressOfBorrow(self)),
-                  count: inline.count
-                )
-            case .large(let slice):
-                buffer = unsafe UnsafeRawBufferPointer(
-                  start: slice.storage.mutableBytes?.advanced(by: slice.startIndex), count: slice.count
-                )
-            case .slice(let slice):
-                buffer = unsafe UnsafeRawBufferPointer(
-                  start: slice.storage.mutableBytes?.advanced(by: slice.startIndex), count: slice.count
-                )
-            }
+            let buffer = unsafe UnsafeRawBufferPointer(
+                start: _representation.storage.mutableBytes?.advanced(by: _representation.startIndex), count: _representation.slice.count
+            )
             let span = unsafe RawSpan(_unsafeBytes: buffer)
             return unsafe _overrideLifetime(span, borrowing: self)
         }
@@ -393,32 +378,9 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
     public var mutableBytes: MutableRawSpan {
         @lifetime(&self)
         mutating get {
-            let buffer: UnsafeMutableRawBufferPointer
-            switch _representation {
-            case .empty:
-                buffer = UnsafeMutableRawBufferPointer(start: nil, count: 0)
-            case .inline(let inline):
-                buffer = unsafe UnsafeMutableRawBufferPointer(
-                  start: UnsafeMutableRawPointer(Builtin.addressOfBorrow(self)),
-                  count: inline.count
-                )
-            case .large(var slice):
-                // Clear _representation during the unique check to avoid double counting the reference, and assign the mutated slice back to _representation afterwards
-                _representation = .empty
-                slice.ensureUniqueReference()
-                _representation = .large(slice)
-                buffer = unsafe UnsafeMutableRawBufferPointer(
-                  start: slice.storage.mutableBytes?.advanced(by: slice.startIndex), count: slice.count
-                )
-            case .slice(var slice):
-                // Clear _representation during the unique check to avoid double counting the reference, and assign the mutated slice back to _representation afterwards
-                _representation = .empty
-                slice.ensureUniqueReference()
-                _representation = .slice(slice)
-                buffer = unsafe UnsafeMutableRawBufferPointer(
-                  start: slice.storage.mutableBytes?.advanced(by: slice.startIndex), count: slice.count
-                )
-            }
+            let buffer = unsafe UnsafeMutableRawBufferPointer(
+                start: _representation.storage.mutableBytes?.advanced(by: _representation.startIndex), count: _representation.count
+            )
             let span = unsafe MutableRawSpan(_unsafeBytes: buffer)
             return unsafe _overrideLifetime(span, mutating: &self)
         }
@@ -429,40 +391,11 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
     public var mutableSpan: MutableSpan<UInt8> {
         @lifetime(&self)
         mutating get {
-#if false // see https://github.com/swiftlang/swift/issues/81218
-            var bytes = mutableBytes
-            let span = unsafe bytes._unsafeMutableView(as: UInt8.self)
-            return _overrideLifetime(span, mutating: &self)
-#else
-            let buffer: UnsafeMutableRawBufferPointer
-            switch _representation {
-            case .empty:
-                buffer = UnsafeMutableRawBufferPointer(start: nil, count: 0)
-            case .inline(let inline):
-                buffer = unsafe UnsafeMutableRawBufferPointer(
-                  start: UnsafeMutableRawPointer(Builtin.addressOfBorrow(self)),
-                  count: inline.count
-                )
-            case .large(var slice):
-                // Clear _representation during the unique check to avoid double counting the reference, and assign the mutated slice back to _representation afterwards
-                _representation = .empty
-                slice.ensureUniqueReference()
-                _representation = .large(slice)
-                buffer = unsafe UnsafeMutableRawBufferPointer(
-                  start: slice.storage.mutableBytes?.advanced(by: slice.startIndex), count: slice.count
-                )
-            case .slice(var slice):
-                // Clear _representation during the unique check to avoid double counting the reference, and assign the mutated slice back to _representation afterwards
-                _representation = .empty
-                slice.ensureUniqueReference()
-                _representation = .slice(slice)
-                buffer = unsafe UnsafeMutableRawBufferPointer(
-                  start: slice.storage.mutableBytes?.advanced(by: slice.startIndex), count: slice.count
-                )
-            }
+            let buffer = unsafe UnsafeMutableRawBufferPointer(
+                start: _representation.storage.mutableBytes?.advanced(by: _representation.startIndex), count: _representation.count
+            )
             let span = unsafe MutableSpan<UInt8>(_unsafeBytes: buffer)
             return unsafe _overrideLifetime(span, mutating: &self)
-#endif
         }
     }
 
@@ -589,10 +522,16 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
     /// - parameter subrange: The range in the data to replace. If `subrange.lowerBound == data.count && subrange.count == 0` then this operation is an append.
     /// - parameter data: The replacement data.
     @inlinable // This is @inlinable as trivially forwarding.
+    @inline(__always)
     public mutating func replaceSubrange(_ subrange: Range<Index>, with data: Data) {
         data.withUnsafeBytes { (buffer: UnsafeRawBufferPointer) in
             _representation.replaceSubrange(subrange, with: buffer.baseAddress, count: buffer.count)
         }
+    }
+    
+    @_alwaysEmitIntoClient @inline(__always)
+    public mutating func append(_ byte: UInt8) {
+        _representation.append(byte)
     }
 
     /// Replace a region of bytes in the data with new bytes from a buffer.
@@ -786,15 +725,6 @@ extension Data {
     /// Returns `true` if the two `Data` arguments are equal.
     @inlinable // This is @inlinable as emission into clients is safe -- the concept of equality on Data will not change.
     public static func ==(d1 : Data, d2 : Data) -> Bool {
-        // See if both are empty
-        switch (d1._representation, d2._representation) {
-        case (.empty, .empty):
-            return true
-        default:
-            // Continue on to checks below
-            break
-        }
-        
         let length1 = d1.count
         let length2 = d2.count
         

@@ -76,25 +76,25 @@ extension Data {
             length = UInt8(count)
         }
         
-        @inlinable // This is @inlinable as a convenience initializer.
-        init(_ slice: InlineSlice, count: Int) {
-            self.init(count: count)
-            Swift.withUnsafeMutableBytes(of: &bytes) { dstBuffer in
-                slice.withUnsafeBytes { srcBuffer in
-                    dstBuffer.copyMemory(from: UnsafeRawBufferPointer(start: srcBuffer.baseAddress, count: count))
-                }
-            }
-        }
-        
-        @inlinable // This is @inlinable as a convenience initializer.
-        init(_ slice: LargeSlice, count: Int) {
-            self.init(count: count)
-            Swift.withUnsafeMutableBytes(of: &bytes) { dstBuffer in
-                slice.withUnsafeBytes { srcBuffer in
-                    dstBuffer.copyMemory(from: UnsafeRawBufferPointer(start: srcBuffer.baseAddress, count: count))
-                }
-            }
-        }
+//        @inlinable // This is @inlinable as a convenience initializer.
+//        init(_ slice: InlineSlice, count: Int) {
+//            self.init(count: count)
+//            Swift.withUnsafeMutableBytes(of: &bytes) { dstBuffer in
+//                slice.withUnsafeBytes { srcBuffer in
+//                    dstBuffer.copyMemory(from: UnsafeRawBufferPointer(start: srcBuffer.baseAddress, count: count))
+//                }
+//            }
+//        }
+//        
+//        @inlinable // This is @inlinable as a convenience initializer.
+//        init(_ slice: LargeSlice, count: Int) {
+//            self.init(count: count)
+//            Swift.withUnsafeMutableBytes(of: &bytes) { dstBuffer in
+//                slice.withUnsafeBytes { srcBuffer in
+//                    dstBuffer.copyMemory(from: UnsafeRawBufferPointer(start: srcBuffer.baseAddress, count: count))
+//                }
+//            }
+//        }
         
         @inlinable // This is @inlinable as trivially computable.
         var capacity: Int {

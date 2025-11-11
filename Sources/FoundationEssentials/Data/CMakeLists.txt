@@ -14,9 +14,7 @@
 
 target_sources(FoundationEssentials PRIVATE
     Representations/Data+Inline.swift
-    Representations/Data+InlineSlice.swift
-    Representations/Data+LargeSlice.swift
-    Representations/Data+Representation.swift
+    Representations/Data+NewABI.swift
     Representations/DataStorage.swift
     
     Collections+DataProtocol.swift

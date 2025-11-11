@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if false
+
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 extension Data {
     // The actual storage for Data's various representations.
@@ -560,3 +562,5 @@ extension Data {
         }
     }
 }
+
+#endif

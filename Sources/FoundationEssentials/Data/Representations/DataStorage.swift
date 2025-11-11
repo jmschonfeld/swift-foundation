@@ -30,6 +30,7 @@ import ucrt
 // coexist without a conflicting ObjC class name, so it was renamed.
 // The old name must not be used in the new runtime.
 @usableFromInline
+@_fixed_layout
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 internal final class __DataStorage : @unchecked Sendable {
     @usableFromInline static let maxSize = Int.max >> 1
@@ -97,10 +98,11 @@ internal final class __DataStorage : @unchecked Sendable {
         return UnsafeRawPointer(_bytes)?.advanced(by: -_offset)
     }
     
-    @inlinable // This is @inlinable despite escaping the _DataStorage boundary layer because it is generic and trivially forwarding.
+    @inlinable @inline(__always) // This is @inlinable despite escaping the _DataStorage boundary layer because it is generic and trivially forwarding.
     @discardableResult
     func withUnsafeBytes<Result>(in range: Range<Int>, apply: (UnsafeRawBufferPointer) throws -> Result) rethrows -> Result {
-        return try apply(UnsafeRawBufferPointer(start: _bytes?.advanced(by: range.lowerBound - _offset), count: Swift.min(range.upperBound - range.lowerBound, _length)))
+        guard let _bytes else { return try apply(UnsafeRawBufferPointer(start: nil, count: 0)) }
+        return try apply(UnsafeRawBufferPointer(start: _bytes.advanced(by: range.lowerBound &- _offset), count: Swift.min(range.upperBound &- range.lowerBound, _length)))
     }
     
     @inlinable // This is @inlinable despite escaping the _DataStorage boundary layer because it is generic and trivially forwarding.
@@ -168,9 +170,15 @@ internal final class __DataStorage : @unchecked Sendable {
         return _capacity == 0
     }
     
-    @usableFromInline // This is not @inlinable as it is a non-trivial, non-generic function.
+    @_alwaysEmitIntoClient
+    @inline(__always)
     func ensureUniqueBufferReference(growingTo newLength: Int = 0, clear: Bool = false) {
         guard isExternallyOwned || newLength > _capacity else { return }
+        _ensureUniqueBufferReference(growingTo: newLength, clear: clear)
+    }
+    
+    @usableFromInline // This is not @inlinable as it is a non-trivial, non-generic function.
+    func _ensureUniqueBufferReference(growingTo newLength: Int = 0, clear: Bool = false) {
         
         if newLength == 0 {
             if isExternallyOwned {
@@ -336,7 +344,7 @@ internal final class __DataStorage : @unchecked Sendable {
     // Using this entrypoint from existing inlinable code required an availability check, and that check has proved to be extremely expensive
     // This entrypoint is left to preserve ABI compatibility, but inlinable code has since switched back to calling the original entrypoint using a tuple that is layout-compatible with NSRange
     @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
-    @usableFromInline
+    @inlinable @inline(__always)
     func replaceBytes(in range_: Range<Int>, with replacementBytes: UnsafeRawPointer?, length replacementLength: Int) {
         // Call through to the main implementation
         self.replaceBytes(in: (range_.lowerBound, range_.upperBound &- range_.lowerBound), with: replacementBytes, length: replacementLength)
@@ -347,9 +355,9 @@ internal final class __DataStorage : @unchecked Sendable {
     @usableFromInline
     @_silgen_name("$s10Foundation13__DataStorageC12replaceBytes2in4with6lengthySo8_NSRangeV_SVSgSitF")
     internal func replaceBytes(in range_: (location: Int, length: Int), with replacementBytes: UnsafeRawPointer?, length replacementLength: Int) {
-        let range = (location: range_.location - _offset, length: range_.length)
+        let range = (location: range_.location &- _offset, length: range_.length)
         let currentLength = _length
-        let resultingLength = currentLength - range.length + replacementLength
+        let resultingLength = currentLength &- range.length + replacementLength
         let shift = resultingLength - currentLength
         let mutableBytes: UnsafeMutableRawPointer
         if resultingLength > currentLength {
@@ -358,7 +366,7 @@ internal final class __DataStorage : @unchecked Sendable {
         } else {
             ensureUniqueBufferReference()
         }
-        mutableBytes = _bytes!
+        mutableBytes = _bytes.unsafelyUnwrapped
         /* shift the trailing bytes */
         let start = range.location
         let length = range.length
@@ -512,6 +520,6 @@ internal final class __DataStorage : @unchecked Sendable {
     
     @inlinable // This is @inlinable despite escaping the __DataStorage boundary layer because it is trivially computed.
     func mutableCopy(_ range: Range<Int>) -> __DataStorage {
-        return __DataStorage(bytes: _bytes?.advanced(by: range.lowerBound - _offset), length: range.upperBound - range.lowerBound, copy: true, deallocator: nil, offset: range.lowerBound)
+        return __DataStorage(bytes: _bytes?.advanced(by: range.lowerBound &- _offset), length: range.upperBound &- range.lowerBound, copy: true, deallocator: nil, offset: range.lowerBound)
     }
 }
