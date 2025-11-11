@@ -10,6 +10,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+@inline(never)
+public func blackHole<T: ~Copyable & ~Escapable>(_: borrowing T) {}
+
 #if os(Windows)
 @usableFromInline let calloc = ucrt.calloc
 @usableFromInline let malloc = ucrt.malloc
