@@ -86,12 +86,12 @@ internal final class __DataStorage : @unchecked Sendable {
         return (size > (128 * 1024))
     }
     
-    @usableFromInline var _bytes: UnsafeMutableRawPointer?
-    @usableFromInline var _length: Int
-    @usableFromInline var _capacity: Int
-    @usableFromInline var _offset: Int
-    @usableFromInline var _deallocator: ((UnsafeMutableRawPointer, Int) -> Void)?
-    @usableFromInline var _needToZero: Bool
+    @exclusivity(unchecked) @usableFromInline var _bytes: UnsafeMutableRawPointer?
+    @exclusivity(unchecked) @usableFromInline var _length: Int
+    @exclusivity(unchecked) @usableFromInline var _capacity: Int
+    @exclusivity(unchecked) @usableFromInline var _offset: Int
+    @exclusivity(unchecked) @usableFromInline var _deallocator: ((UnsafeMutableRawPointer, Int) -> Void)?
+    @exclusivity(unchecked) @usableFromInline var _needToZero: Bool
     
     @inlinable // This is @inlinable as trivially computable.
     var bytes: UnsafeRawPointer? {
