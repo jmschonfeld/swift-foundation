@@ -207,35 +207,3 @@ extension String {
         )
     }
 }
-
-extension Data {
-
-    init(
-        capacity: Int,
-        initializingWith initializer: (inout OutputBuffer<UInt8>) throws -> Void
-    ) rethrows {
-        self = Data(count: capacity) // initialized with zeroed buffer
-        let count = try self.withUnsafeMutableBytes { rawBuffer in
-            try rawBuffer.withMemoryRebound(to: UInt8.self) { buffer in
-                buffer.deinitialize()
-                var output = OutputBuffer(
-                    initializing: buffer.baseAddress.unsafelyUnwrapped,
-                    capacity: capacity
-                )
-                do {
-                    try initializer(&output)
-                    let initialized = output.relinquishBorrowedMemory()
-                    assert(initialized.baseAddress == buffer.baseAddress)
-                    buffer[initialized.count..<buffer.count].initialize(repeating: 0)
-                    return initialized.count
-                } catch {
-                    // Do this regardless of outcome
-                    _ = output.relinquishBorrowedMemory()
-                    throw error
-                }
-            }
-        }
-        assert(count <= self.count)
-        self.replaceSubrange(count..<self.count, with: EmptyCollection())
-    }
-}

@@ -164,7 +164,22 @@ extension Data {
                 return try apply(UnsafeMutableRawBufferPointer(start: rawBuffer.baseAddress, count: count))
             }
         }
-        
+
+        @_alwaysEmitIntoClient // This is @inlinable as a generic, trivially forwarding function.
+        @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, visionOS 1.0, *)
+        mutating func withUninitializedBytes<R: ~Copyable, E>(_ apply: (inout OutputRawSpan) throws(E) -> R) throws(E) -> R {
+            var count = Int(length)
+            defer { length = UInt8(count) }
+            return try Swift.withUnsafeMutableBytes(of: &bytes) { buffer throws(E) in
+                var outputSpan = OutputRawSpan(buffer: buffer, initializedCount: count)
+                defer {
+                    count = outputSpan.finalize(for: buffer)
+                    outputSpan = OutputRawSpan()
+                }
+                return try apply(&outputSpan)
+            }
+        }
+
         @inlinable // This is @inlinable as trivially computable.
         mutating func append(byte: UInt8) {
             let count = self.count
