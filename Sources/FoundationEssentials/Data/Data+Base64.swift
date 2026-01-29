@@ -288,18 +288,17 @@ extension Base64 {
         let e1 = options.contains(.base64URLAlphabet) ? Self.encoding1url.span : Self.encoding1.span
         let to = input.byteCount / 3 * 3
 
-        assert(e0.count == 256)
-        assert(e0.count == 256)
+        precondition(e0.count == 256)
+        precondition(e0.count == 256)
 
-        
-        self.loopEncode(e0, e1, input: input.extracting(first: to), output: &buffer)
-        
-        if to < input.byteCount {
-            let index = to
-            
-            let i1 = input[_byteAtIndex: index]
-            let i2 = index &+ 1 < input.byteCount ? input[_byteAtIndex: index &+ 1] : nil
-            let i3 = index &+ 2 < input.byteCount ? input[_byteAtIndex: index &+ 2] : nil
+        var remaining = input
+
+        self.loopEncode(e0, e1, input: remaining.splitOff(first: to), output: &buffer)
+
+        if !remaining.isEmpty {
+            let i1 = remaining[_byteAtIndex: 0]
+            let i2 = remaining.byteCount > 1 ? remaining[_byteAtIndex: 1] : nil
+            let i3 = remaining.byteCount > 2 ? remaining[_byteAtIndex: 2] : nil
 
             buffer.append(e0[Int(i1)])
             
@@ -360,40 +359,40 @@ extension Base64 {
         let e0 = options.contains(.base64URLAlphabet) ? Self.encoding0url.span : Self.encoding0.span
         let e1 = options.contains(.base64URLAlphabet) ? Self.encoding1url.span : Self.encoding1.span
 
-        assert(e0.count == 256)
-        assert(e1.count == 256)
-        
+        precondition(e0.count == 256)
+        precondition(e1.count == 256)
+
+        var remaining = input
+
         // first full line
-        if input.byteCount >= lineLength {
-            self.loopEncode(e0, e1, input: input.extracting(first: lineLength), output: &buffer)
+        if remaining.byteCount >= lineLength {
+            self.loopEncode(e0, e1, input: remaining.splitOff(first: lineLength), output: &buffer)
         }
         
         // following full lines
-        for lineInputIndex in stride(from: lineLength, to: lines * lineLength, by: lineLength) {
+        while remaining.byteCount >= lineLength {
             buffer.append(separatorByte1)
             if let separatorByte2 {
                 buffer.append(separatorByte2)
             }
-            
-            self.loopEncode(e0, e1, input: input.extracting(lineInputIndex ..< (lineInputIndex + lineLength)), output: &buffer)
+
+            self.loopEncode(e0, e1, input: remaining.splitOff(first: lineLength), output: &buffer)
         }
         
         // last line beginning
-        if lines > 0 && lines * lineLength < input.byteCount {
+        if !buffer.isEmpty && !remaining.isEmpty {
             buffer.append(separatorByte1)
             if let separatorByte2 {
                 buffer.append(separatorByte2)
             }
         }
-        let to = input.byteCount / 3 * 3
-        self.loopEncode(e0, e1, input: input.extracting((lines * lineLength) ..< to), output: &buffer)
-        
-        if to < input.byteCount {
-            let index = to
-            
-            let i1 = input[_byteAtIndex: index]
-            let i2 = index + 1 < input.byteCount ? input[_byteAtIndex: index &+ 1] : nil
-            let i3 = index + 2 < input.byteCount ? input[_byteAtIndex: index &+ 2] : nil
+        let to = remaining.byteCount / 3 * 3
+        self.loopEncode(e0, e1, input: remaining.splitOff(first: to), output: &buffer)
+
+        if !remaining.isEmpty {
+            let i1 = remaining[_byteAtIndex: 0]
+            let i2 = remaining.byteCount > 1 ? remaining[_byteAtIndex: 1] : nil
+            let i3 = remaining.byteCount > 2 ? remaining[_byteAtIndex: 2] : nil
 
             buffer.append(e0[Int(i1)])
             
@@ -417,6 +416,7 @@ extension Base64 {
         }
     }
 
+    @inline(__always) // Inlined to ensure that this code is optimized knowing the size of e0 and e1
     @_lifetime(output: copy output)
     private static func loopEncode(
         _ e0: Span<UInt8>,
@@ -424,14 +424,19 @@ extension Base64 {
         input: RawSpan,
         output: inout OutputSpan<UInt8>
     ) {
-        for index in stride(from: input.byteOffsets.lowerBound, to: input.byteOffsets.upperBound, by: 3) {
+        var index = input.byteOffsets.lowerBound
+        let upper = input.byteOffsets.upperBound - 3
+        while index <= upper {
             let i1 = input[_byteAtIndex: index]
             let i2 = input[_byteAtIndex: index &+ 1]
             let i3 = input[_byteAtIndex: index &+ 2]
+
             output.append(e0[Int(i1)])
             output.append(e1[Int(((i1 & 0x03) << 4) | ((i2 >> 4) & 0x0F))])
             output.append(e1[Int(((i2 & 0x0F) << 2) | ((i3 >> 6) & 0x03))])
             output.append(e1[Int(i3)])
+//            )
+            index &+= 3
         }
     }
 
@@ -471,7 +476,29 @@ extension Base64 {
 extension RawSpan {
     @inline(__always)
     fileprivate subscript(_byteAtIndex index: Int) -> UInt8 {
-        self.unsafeLoad(fromByteOffset: index, as: UInt8.self)
+        self.unsafeLoad(fromUncheckedByteOffset: index, as: UInt8.self)
+    }
+
+    @inline(__always)
+    @_lifetime(copy self)
+    fileprivate mutating func splitOff(first: Int) -> RawSpan {
+        let firstPart = self.extracting(first: first)
+        self = self.extracting(droppingFirst: first)
+        return firstPart
+    }
+}
+
+extension OutputSpan<UInt8> {
+    @inline(__always)
+    fileprivate mutating func append(_ a: UInt8, _ b: UInt8, _ c: UInt8, _ d: UInt8) {
+        precondition(self.freeCapacity >= 4)
+        self.withUnsafeMutableBufferPointer { buffer, initializedCount in
+            buffer[initializedCount] = a
+            buffer[initializedCount &+ 1] = b
+            buffer[initializedCount &+ 2] = c
+            buffer[initializedCount &+ 3] = d
+            initializedCount &+= 4
+        }
     }
 }
 
@@ -497,26 +524,6 @@ extension Base64 {
     static func decode(bytes encoded: Span<UInt8>, options: Data.Base64DecodingOptions = []) throws(DecodingError) -> Data? {
         try Self._decodeToData(from: encoded, options: options)
     }
-
-//    static func decode<Buffer: Collection>(bytes: Buffer, options: Data.Base64DecodingOptions = []) throws(DecodingError) -> Data where Buffer.Element == UInt8 {
-//        guard bytes.count > 0 else {
-//            return Data()
-//        }
-//
-//        let result = bytes.withContiguousStorageIfAvailable { bufferPointer in
-//            // `withContiguousStorageIfAvailable` sadly does not support typed throws, so we need
-//            // to use Result to get the error out without allocation for the error.
-//            Result(catching: { () throws(DecodingError) -> Data in
-//                try Self._decodeToData(from: bufferPointer, options: options)
-//            })
-//        }
-//
-//        if let result {
-//            return try result.get()
-//        }
-//
-//        return try self.decode(bytes: Array(bytes), options: options)
-//    }
 
     static func _decodeToData(from inBuffer: Span<UInt8>, options: Data.Base64DecodingOptions) throws(DecodingError) -> Data {
         guard inBuffer.count > 0 else {
@@ -580,10 +587,10 @@ extension Base64 {
         let d2 = Self.decoding2.span
         let d3 = Self.decoding3.span
 
-        assert(d0.count == 256)
-        assert(d1.count == 256)
-        assert(d2.count == 256)
-        assert(d3.count == 256)
+        precondition(d0.count == 256)
+        precondition(d1.count == 256)
+        precondition(d2.count == 256)
+        precondition(d3.count == 256)
 
         if fullchunks > 0 {
             for chunk in 0 ..< fullchunks {
@@ -658,10 +665,10 @@ extension Base64 {
         let d2 = Self.decoding2.span
         let d3 = Self.decoding3.span
 
-        assert(d0.count == 256)
-        assert(d1.count == 256)
-        assert(d2.count == 256)
-        assert(d3.count == 256)
+        precondition(d0.count == 256)
+        precondition(d1.count == 256)
+        precondition(d2.count == 256)
+        precondition(d3.count == 256)
 
         var inIndex = 0
 
