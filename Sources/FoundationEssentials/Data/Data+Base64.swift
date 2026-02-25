@@ -371,7 +371,7 @@ extension Base64 {
         
         // following full lines
         while remaining.byteCount >= lineLength {
-            buffer.append(separatorByte1)
+            buffer.append(separatorByte1) // JTODO bounds check
             if let separatorByte2 {
                 buffer.append(separatorByte2)
             }
@@ -426,16 +426,19 @@ extension Base64 {
     ) {
         var index = input.byteOffsets.lowerBound
         let upper = input.byteOffsets.upperBound - 3
+        precondition(output.freeCapacity >= (input.byteCount / 3) * 4)
         while index <= upper {
             let i1 = input[_byteAtIndex: index]
             let i2 = input[_byteAtIndex: index &+ 1]
             let i3 = input[_byteAtIndex: index &+ 2]
 
-            output.append(e0[Int(i1)])
-            output.append(e1[Int(((i1 & 0x03) << 4) | ((i2 >> 4) & 0x0F))])
-            output.append(e1[Int(((i2 & 0x0F) << 2) | ((i3 >> 6) & 0x03))])
-            output.append(e1[Int(i3)])
-//            )
+            // Bounds checking manually hoisted to precondition above
+            output.appendUnchecked(
+                e0[Int(i1)],
+                e1[Int(((i1 & 0x03) << 4) | ((i2 >> 4) & 0x0F))],
+                e1[Int(((i2 & 0x0F) << 2) | ((i3 >> 6) & 0x03))],
+                e1[Int(i3)]
+            )
             index &+= 3
         }
     }
@@ -476,7 +479,7 @@ extension Base64 {
 extension RawSpan {
     @inline(__always)
     fileprivate subscript(_byteAtIndex index: Int) -> UInt8 {
-        self.unsafeLoad(fromUncheckedByteOffset: index, as: UInt8.self)
+        self.unsafeLoad(fromByteOffset: index, as: UInt8.self)
     }
 
     @inline(__always)
@@ -488,10 +491,25 @@ extension RawSpan {
     }
 }
 
+// Appends elements to the output span without any bounds checking
+// Used for appending elements in a loop with a manually hoisted bounds check
+extension OutputRawSpan {
+    @inline(__always)
+    fileprivate mutating func appendUnchecked(_ a: UInt8, _ b: UInt8, _ c: UInt8) {
+        assert(self.freeCapacity >= 3)
+        self.withUnsafeMutableBytes { buffer, initializedCount in
+            buffer[initializedCount] = a
+            buffer[initializedCount &+ 1] = b
+            buffer[initializedCount &+ 2] = c
+            initializedCount &+= 3
+        }
+    }
+}
+
 extension OutputSpan<UInt8> {
     @inline(__always)
-    fileprivate mutating func append(_ a: UInt8, _ b: UInt8, _ c: UInt8, _ d: UInt8) {
-        precondition(self.freeCapacity >= 4)
+    fileprivate mutating func appendUnchecked(_ a: UInt8, _ b: UInt8, _ c: UInt8, _ d: UInt8) {
+        assert(self.freeCapacity >= 4)
         self.withUnsafeMutableBufferPointer { buffer, initializedCount in
             buffer[initializedCount] = a
             buffer[initializedCount &+ 1] = b
@@ -608,9 +626,10 @@ extension Base64 {
 
                 withUnsafePointer(to: &x) { ptr in
                     ptr.withMemoryRebound(to: UInt8.self, capacity: 4) { newPtr in
-                        outBuffer.append(newPtr[0])
-                        outBuffer.append(newPtr[1])
-                        outBuffer.append(newPtr[2])
+                        // Bounds checking manually hoisted to guard statement above
+                        outBuffer.appendUnchecked(
+                            newPtr[0], newPtr[1], newPtr[2]
+                        )
                     }
                 }
             }
@@ -747,9 +766,10 @@ extension Base64 {
 
             withUnsafePointer(to: &x) { ptr in
                 ptr.withMemoryRebound(to: UInt8.self, capacity: 4) { newPtr in
-                    outBuffer.append(newPtr[0])
-                    outBuffer.append(newPtr[1])
-                    outBuffer.append(newPtr[2])
+                    // Bounds checking manually hoisted to guard statement above
+                    outBuffer.appendUnchecked(
+                        newPtr[0], newPtr[1], newPtr[2]
+                    )
                 }
             }
         }
