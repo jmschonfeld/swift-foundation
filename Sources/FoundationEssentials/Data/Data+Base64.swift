@@ -359,6 +359,7 @@ extension Base64 {
         let e0 = options.contains(.base64URLAlphabet) ? Self.encoding0url.span : Self.encoding0.span
         let e1 = options.contains(.base64URLAlphabet) ? Self.encoding1url.span : Self.encoding1.span
 
+        // Validate the size of mappings so the compiler can optimize away bounds checks later
         precondition(e0.count == 256)
         precondition(e1.count == 256)
 
@@ -532,18 +533,14 @@ extension Base64 {
     }
 
     static func decode(string encoded: String, options: Data.Base64DecodingOptions = []) throws(DecodingError) -> Data {
-        try Self._decodeToData(from: encoded.utf8.span, options: options)
+        try Self.decode(bytes: encoded.utf8.span, options: options)
     }
 
-    static func decode(data encoded: Data, options: Data.Base64DecodingOptions = []) throws(DecodingError) -> Data? {
-        try Self._decodeToData(from: encoded.span, options: options)
+    static func decode(data encoded: Data, options: Data.Base64DecodingOptions = []) throws(DecodingError) -> Data {
+        try Self.decode(bytes: encoded.span, options: options)
     }
 
-    static func decode(bytes encoded: Span<UInt8>, options: Data.Base64DecodingOptions = []) throws(DecodingError) -> Data? {
-        try Self._decodeToData(from: encoded, options: options)
-    }
-
-    static func _decodeToData(from inBuffer: Span<UInt8>, options: Data.Base64DecodingOptions) throws(DecodingError) -> Data {
+    static func decode(bytes inBuffer: Span<UInt8>, options: Data.Base64DecodingOptions = []) throws(DecodingError) -> Data {
         guard inBuffer.count > 0 else {
             return Data()
         }
@@ -605,6 +602,7 @@ extension Base64 {
         let d2 = Self.decoding2.span
         let d3 = Self.decoding3.span
 
+        // Validate the size of mappings so the compiler can optimize away bounds checks later
         precondition(d0.count == 256)
         precondition(d1.count == 256)
         precondition(d2.count == 256)
@@ -613,10 +611,12 @@ extension Base64 {
         if fullchunks > 0 {
             for chunk in 0 ..< fullchunks {
                 let inIndex = chunk * 4
-                let a0 = inBuffer[inIndex]
-                let a1 = inBuffer[inIndex + 1]
-                let a2 = inBuffer[inIndex + 2]
-                let a3 = inBuffer[inIndex + 3]
+                // inIndex is guaranteed to be within the bounds of inBuffer based on the calculation of fullchunks above
+                // The compiler cannot see this and optimize away the bounds checks, so use unchecked subscripts here
+                let a0 = inBuffer[unchecked: inIndex]
+                let a1 = inBuffer[unchecked: inIndex &+ 1]
+                let a2 = inBuffer[unchecked: inIndex &+ 2]
+                let a3 = inBuffer[unchecked: inIndex &+ 3]
                 var x: UInt32 = d0[Int(a0)] | d1[Int(a1)] | d2[Int(a2)] | d3[Int(a3)]
 
                 if x >= Self.badCharacter {
@@ -691,11 +691,12 @@ extension Base64 {
 
         var inIndex = 0
 
-        fastLoop: while inIndex + 3 < inBuffer.count {
-            let a0 = inBuffer[inIndex]
-            let a1 = inBuffer[inIndex &+ 1]
-            let a2 = inBuffer[inIndex &+ 2]
-            let a3 = inBuffer[inIndex &+ 3]
+        fastLoop: while inIndex &+ 3 < inBuffer.count {
+            // The compiler does not optimize away bounds checks here, so we manually use the unchecked subscript since the while loop verifies indices are valid
+            let a0 = inBuffer[unchecked: inIndex]
+            let a1 = inBuffer[unchecked: inIndex &+ 1]
+            let a2 = inBuffer[unchecked: inIndex &+ 2]
+            let a3 = inBuffer[unchecked: inIndex &+ 3]
             var x: UInt32 = d0[Int(a0)] | d1[Int(a1)] | d2[Int(a2)] | d3[Int(a3)]
 
             if x >= Self.badCharacter {
@@ -733,8 +734,9 @@ extension Base64 {
                 let startIndex = inIndex
                 inIndex &+= 1
                 scanForValidCharacters: while inIndex < inBuffer.count {
-                    guard self.isValidBase64Byte(inBuffer[inIndex], options: options) else {
-                        if inBuffer[inIndex] == Self.encodePaddingCharacter {
+                    let byte = inBuffer[unchecked: inIndex]
+                    guard self.isValidBase64Byte(byte, options: options) else {
+                        if byte == Self.encodePaddingCharacter {
                             inIndex = startIndex
                             break fastLoop
                         }
@@ -745,11 +747,11 @@ extension Base64 {
                     defer { inIndex &+= 1 }
 
                     if b1 == nil {
-                        b1 = inBuffer[inIndex]
+                        b1 = inBuffer[unchecked: inIndex]
                     } else if b2 == nil {
-                        b2 = inBuffer[inIndex]
+                        b2 = inBuffer[unchecked: inIndex]
                     } else if b3 == nil {
-                        b3 = inBuffer[inIndex]
+                        b3 = inBuffer[unchecked: inIndex]
                         break scanForValidCharacters
                     }
                 }
@@ -816,7 +818,7 @@ extension Base64 {
 
             scanForValidCharacters: while inIndex < inBuffer.count {
                 defer { inIndex &+= 1 }
-                let value = inBuffer[inIndex]
+                let value = inBuffer[unchecked: inIndex]
                 if self.isValidBase64Byte(value, options: options) {
                     if b0 == nil {
                         b0 = value
@@ -879,7 +881,7 @@ extension Base64 {
         var inIndex = index
         // ensure that all remaining characters are unknown or padding
         while inIndex < inBuffer.count {
-            let value = inBuffer[inIndex]
+            let value = inBuffer[unchecked: inIndex]
             if self.isValidBase64Byte(value, options: options) {
                 throw DecodingError.invalidCharacter(inBuffer[inIndex])
             }
