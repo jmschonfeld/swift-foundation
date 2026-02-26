@@ -34,9 +34,10 @@ let benchmarks = {
     Benchmark(
         "base64-encode-jwtHeader-toString-noOptions",
         configuration: Benchmark.Configuration(
-            metrics: [.cpuTotal, .mallocCountTotal, .throughput],
+            metrics: [.instructions],
+            units: [.instructions: .count],
             scalingFactor: .kilo,
-            maxDuration: .seconds(3)
+            maxDuration: .seconds(3),
         )
     ) { benchmark in
         for _ in benchmark.scaledIterations {
@@ -49,7 +50,8 @@ let benchmarks = {
     Benchmark(
         "base64-encode-1MB-toString-noOptions",
         configuration: Benchmark.Configuration(
-            metrics: [.cpuTotal, .mallocCountTotal, .throughput],
+            metrics: [.instructions],
+            units: [.instructions: .count],
             scalingFactor: .one,
             maxDuration: .seconds(3)
         )
@@ -64,7 +66,8 @@ let benchmarks = {
     Benchmark(
         "base64-encode-1MB-toData-noOptions",
         configuration: Benchmark.Configuration(
-            metrics: [.cpuTotal, .mallocCountTotal, .throughput],
+            metrics: [.instructions],
+            units: [.instructions: .count],
             scalingFactor: .one,
             maxDuration: .seconds(3)
         )
@@ -79,7 +82,8 @@ let benchmarks = {
     Benchmark(
         "base64-encode-1MB-toString-lineLength64",
         configuration: Benchmark.Configuration(
-            metrics: [.cpuTotal, .mallocCountTotal, .throughput],
+            metrics: [.instructions],
+            units: [.instructions: .count],
             scalingFactor: .one,
             maxDuration: .seconds(3)
         )
@@ -94,7 +98,8 @@ let benchmarks = {
     Benchmark(
         "base64-decode-jwtHeader-fromString-noOptions",
         configuration: Benchmark.Configuration(
-            metrics: [.cpuTotal, .mallocCountTotal, .throughput],
+            metrics: [.instructions],
+            units: [.instructions: .count],
             scalingFactor: .kilo,
             maxDuration: .seconds(3)
         )
@@ -113,7 +118,8 @@ let benchmarks = {
     Benchmark(
         "base64-decode-1MB-fromString-noOptions",
         configuration: Benchmark.Configuration(
-            metrics: [.cpuTotal, .mallocCountTotal, .throughput],
+            metrics: [.instructions],
+            units: [.instructions: .count],
             scalingFactor: .one,
             maxDuration: .seconds(3)
         )
@@ -132,7 +138,8 @@ let benchmarks = {
     Benchmark(
         "base64-decode-1MB-fromData-noOptions",
         configuration: Benchmark.Configuration(
-            metrics: [.cpuTotal, .mallocCountTotal, .throughput],
+            metrics: [.instructions],
+            units: [.instructions: .count],
             scalingFactor: .one,
             maxDuration: .seconds(3)
         )
@@ -151,7 +158,8 @@ let benchmarks = {
     Benchmark(
         "base64-decode-1MB-fromData-noOptions-invalidAfter257bytes",
         configuration: Benchmark.Configuration(
-            metrics: [.cpuTotal, .mallocCountTotal, .throughput],
+            metrics: [.instructions],
+            units: [.instructions: .count],
             scalingFactor: .kilo,
             maxDuration: .seconds(3)
         )
@@ -171,7 +179,8 @@ let benchmarks = {
     Benchmark(
         "base64-decode-1MB-fromString-lineLength64",
         configuration: Benchmark.Configuration(
-            metrics: [.cpuTotal, .mallocCountTotal, .throughput],
+            metrics: [.instructions],
+            units: [.instructions: .count],
             scalingFactor: .one,
             maxDuration: .seconds(3)
         )
