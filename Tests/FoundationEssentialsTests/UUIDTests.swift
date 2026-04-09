@@ -24,6 +24,15 @@ import TestSupport
 
 @Suite("UUID")
 private struct UUIDTests {
+    @Test func misalignedSpanTrap() {
+        struct Misaligned {
+            var pad: UInt8 = 0xFF
+            var uuid: UUID = UUID()
+        }
+        var container = Misaligned()
+        let halves = Span<UInt64>(_bytes: container.uuid.span)
+     }
+
     @Test func equality() {
         let uuidA = UUID(uuidString: "E621E1F8-C36C-495A-93FC-0C247A3E6E5F")
         let uuidB = UUID(uuidString: "e621e1f8-c36c-495a-93fc-0c247a3e6e5f")
@@ -185,7 +194,7 @@ private struct UUIDTests {
     @Test func spanProperty() {
         let uuid = UUID(uuid: (0xe6, 0x21, 0xe1, 0xf8, 0xc3, 0x6c, 0x49, 0x5a, 0x93, 0xfc, 0x0c, 0x24, 0x7a, 0x3e, 0x6e, 0x5f))
         let s = uuid.span
-        #expect(s.count == 16)
+        #expect(s.byteCount == 16)
         #expect(s[0] == 0xe6)
         #expect(s[1] == 0x21)
         #expect(s[6] == 0x49)
@@ -230,7 +239,7 @@ private struct UUIDTests {
 
     @available(FoundationPreview 6.4, *)
     @Test func initializingWithOutputSpan() {
-        let uuid = UUID { (output: inout OutputSpan<UInt8>) in
+        let uuid = UUID { (output: inout OutputRawSpan) in
             for i: UInt8 in 0..<16 {
                 output.append(i)
             }
@@ -245,7 +254,7 @@ private struct UUIDTests {
     @Test func initializingWithOutputSpanMatchesUUIDInit() {
         let expected = UUID(uuid: (0xe6, 0x21, 0xe1, 0xf8, 0xc3, 0x6c, 0x49, 0x5a, 0x93, 0xfc, 0x0c, 0x24, 0x7a, 0x3e, 0x6e, 0x5f))
         let bytes: [UInt8] = [0xe6, 0x21, 0xe1, 0xf8, 0xc3, 0x6c, 0x49, 0x5a, 0x93, 0xfc, 0x0c, 0x24, 0x7a, 0x3e, 0x6e, 0x5f]
-        let uuid = UUID { (output: inout OutputSpan<UInt8>) in
+        let uuid = UUID { (output: inout OutputRawSpan) in
             for b in bytes {
                 output.append(b)
             }
@@ -257,7 +266,7 @@ private struct UUIDTests {
     @Test func initFromSpan() {
         let bytes: [UInt8] = [0xe6, 0x21, 0xe1, 0xf8, 0xc3, 0x6c, 0x49, 0x5a, 0x93, 0xfc, 0x0c, 0x24, 0x7a, 0x3e, 0x6e, 0x5f]
         let span = bytes.span
-        let uuid = UUID(copying: span)
+        let uuid = UUID(copying: span.bytes)
         let expected = UUID(uuid: (0xe6, 0x21, 0xe1, 0xf8, 0xc3, 0x6c, 0x49, 0x5a, 0x93, 0xfc, 0x0c, 0x24, 0x7a, 0x3e, 0x6e, 0x5f))
         #expect(uuid == expected)
     }
